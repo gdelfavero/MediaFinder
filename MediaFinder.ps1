@@ -42,7 +42,7 @@
     Searches for all media files and exports detailed results to CSV.
 
 .NOTES
-    Author: MediaFinder
+    Author: gdelfavero
     Version: 1.0
 #>
 
