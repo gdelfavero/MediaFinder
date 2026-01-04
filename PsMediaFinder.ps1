@@ -173,7 +173,7 @@ switch ($MediaType) {
         }
         
         # Determine file type
-        if ($audioExtensions -contains $file.Extension.ToLower()) {)) {
+        if ($audioExtensions -contains $file.Extension.ToLower()) {
             $fileInfo.Type = "Audio"
             $audioFiles += $fileInfo
         } elseif ($videoExtensions -contains $file.Extension.ToLower()) {
@@ -188,7 +188,9 @@ switch ($MediaType) {
         }
         
         $results += $fileInfo
-    }    # Display summary
+    }
+
+    # Display summary
     Write-Host "`n╔══════════════════════════════════════════════════════════╗" -ForegroundColor Green
     Write-Host "║                     Search Results                      ║" -ForegroundColor Green
     Write-Host "╚══════════════════════════════════════════════════════════╝`n" -ForegroundColor Green
