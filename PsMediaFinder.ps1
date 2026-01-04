@@ -1,3 +1,38 @@
+<#
+.SYNOPSIS
+    PsMediaFinder - A PowerShell-based media file finder.
+
+.DESCRIPTION
+    This script provides the Find-MediaFiles function to search for media files.
+    Can be dot-sourced to use the function, or run directly as a script.
+
+.NOTES
+    Author: gdelfavero
+    Version: 2.0
+#>
+
+[CmdletBinding()]
+param(
+    [Parameter(Position = 0)]
+    [string]$Path,
+    
+    [Parameter()]
+    [ValidateSet("Audio", "Video", "Picture", "Vaults", "All")]
+    [string]$MediaType,
+    
+    [Parameter()]
+    [bool]$Recursive,
+    
+    [Parameter()]
+    [string]$ExportCSV,
+    
+    [Parameter()]
+    [string]$ExportJSON,
+    
+    [Parameter()]
+    [switch]$ShowDetails
+)
+
 function Find-MediaFiles {
     <#
     .SYNOPSIS
@@ -79,45 +114,49 @@ function Find-MediaFiles {
     $pictureExtensions = @('.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.tif', '.svg', '.webp', '.ico', '.raw', '.heic')
     $vaultExtensions = @('.kdbx', '.1pif', '.agilekeychain', '.opvault', '.bw', '.enpass', '.psafe3', '.kdb', '.keepass', '.hc', '.tc')
 
+    Write-Verbose "Function started with Path=$Path, MediaType=$MediaType"
+
     # Helper function to get media files
     function Get-MediaFilesInternal {
-    param(
-        [string]$SearchPath,
-        [string[]]$Extensions,
-        [bool]$RecursiveSearch
-    )
-    
-    $files = @()
-    
-    try {
-        if ($RecursiveSearch) {
-            $files = Get-ChildItem -Path $SearchPath -File -Recurse -ErrorAction SilentlyContinue | 
-                     Where-Object { $Extensions -contains $_.Extension.ToLower() }
-        } else {
-            $files = Get-ChildItem -Path $SearchPath -File -ErrorAction SilentlyContinue | 
-                     Where-Object { $Extensions -contains $_.Extension.ToLower() }
+        param(
+            [string]$SearchPath,
+            [string[]]$Extensions,
+            [bool]$RecursiveSearch
+        )
+        
+        $files = @()
+        
+        try {
+            if ($RecursiveSearch) {
+                $files = Get-ChildItem -Path $SearchPath -File -Recurse -ErrorAction SilentlyContinue | 
+                         Where-Object { $Extensions -contains $_.Extension.ToLower() }
+            } else {
+                $files = Get-ChildItem -Path $SearchPath -File -ErrorAction SilentlyContinue | 
+                         Where-Object { $Extensions -contains $_.Extension.ToLower() }
+            }
+        } catch {
+            Write-Warning "Error accessing path '$SearchPath': $_"
         }
-    } catch {
-        Write-Warning "Error accessing path '$SearchPath': $_"
-    }
-    
+        
         return $files
     }
 
     # Helper function to format file size
     function Format-FileSizeInternal {
         param([long]$Size)
-    
-    if ($Size -gt 1GB) {
-        return "{0:N2} GB" -f ($Size / 1GB)
-    } elseif ($Size -gt 1MB) {
-        return "{0:N2} MB" -f ($Size / 1MB)
-    } elseif ($Size -gt 1KB) {
-        return "{0:N2} KB" -f ($Size / 1KB)
+        
+        if ($Size -gt 1GB) {
+            return "{0:N2} GB" -f ($Size / 1GB)
+        } elseif ($Size -gt 1MB) {
+            return "{0:N2} MB" -f ($Size / 1MB)
+        } elseif ($Size -gt 1KB) {
+            return "{0:N2} KB" -f ($Size / 1KB)
         } else {
             return "{0} bytes" -f $Size
         }
     }
+
+    Write-Verbose "Helper functions defined"
 
     # Validate path
     if (-not (Test-Path -Path $Path)) {
@@ -125,23 +164,23 @@ function Find-MediaFiles {
         return
     }
 
-Write-Host "`n╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║          PsMediaFinder - Media File Scanner            ║" -ForegroundColor Cyan
-Write-Host "╚══════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
+    Write-Host "`n╔══════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+    Write-Host "║          PsMediaFinder - Media File Scanner            ║" -ForegroundColor Cyan
+    Write-Host "╚══════════════════════════════════════════════════════════╝`n" -ForegroundColor Cyan
 
-Write-Host "Searching in: $Path" -ForegroundColor Yellow
-Write-Host "Media Type: $MediaType" -ForegroundColor Yellow
-Write-Host "Recursive: $Recursive`n" -ForegroundColor Yellow
+    Write-Host "Searching in: $Path" -ForegroundColor Yellow
+    Write-Host "Media Type: $MediaType" -ForegroundColor Yellow
+    Write-Host "Recursive: $Recursive`n" -ForegroundColor Yellow
 
-# Determine which extensions to search for
-$searchExtensions = @()
-switch ($MediaType) {
-    "Audio" { $searchExtensions = $audioExtensions }
-    "Video" { $searchExtensions = $videoExtensions }
-    "Picture" { $searchExtensions = $pictureExtensions }
-    "Vaults" { $searchExtensions = $vaultExtensions }
-    "All" { $searchExtensions = $audioExtensions + $videoExtensions + $pictureExtensions + $vaultExtensions }
-}
+    # Determine which extensions to search for
+    $searchExtensions = @()
+    switch ($MediaType) {
+        "Audio" { $searchExtensions = $audioExtensions }
+        "Video" { $searchExtensions = $videoExtensions }
+        "Picture" { $searchExtensions = $pictureExtensions }
+        "Vaults" { $searchExtensions = $vaultExtensions }
+        "All" { $searchExtensions = $audioExtensions + $videoExtensions + $pictureExtensions + $vaultExtensions }
+    }
 
     # Search for media files
     Write-Host "Scanning for media files..." -ForegroundColor Green
@@ -196,7 +235,7 @@ switch ($MediaType) {
     Write-Host "╚══════════════════════════════════════════════════════════╝`n" -ForegroundColor Green
 
     Write-Host "Search completed in: $($duration.TotalSeconds.ToString('F2')) seconds" -ForegroundColor Cyan
-    Write-Host "`nTotal files found: $($results.Count)" -ForegroundColor Whitehite
+    Write-Host "`nTotal files found: $($results.Count)" -ForegroundColor White
 
     if ($MediaType -eq "All" -or $MediaType -eq "Audio") {
         Write-Host "  Audio files:   $($audioFiles.Count)" -ForegroundColor Magenta
@@ -213,17 +252,17 @@ switch ($MediaType) {
 
     # Calculate total size
     $totalSize = ($results | Measure-Object -Property Size -Sum).Sum
-    Write-Host "`nTotal size: $(Format-FileSizeInternal -Size $totalSize)" -ForegroundColor WhitedColor White
+    Write-Host "`nTotal size: $(Format-FileSizeInternal -Size $totalSize)" -ForegroundColor White
 
     # Display detailed results
     if ($results.Count -gt 0) {
-            Write-Host "`n" + ("─" * 80) -ForegroundColor Gray
+        Write-Host "`n" + ("─" * 80) -ForegroundColor Gray
         
         if ($ShowDetails) {
             Write-Host "`nDetailed File List:" -ForegroundColor Cyan
             Write-Host ("─" * 80) -ForegroundColor Gray
             
-            foreach ($file in $results | Sort-Object Type, Name) {e) {
+            foreach ($file in $results | Sort-Object Type, Name) {
                 $typeColor = switch ($file.Type) {
                     "Audio" { "Magenta" }
                     "Video" { "Blue" }
@@ -239,7 +278,7 @@ switch ($MediaType) {
                 Write-Host "  Created:  $($file.Created.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Gray
                 Write-Host "  Modified: $($file.Modified.ToString('yyyy-MM-dd HH:mm:ss'))" -ForegroundColor Gray
             }
-        } else {se {
+        } else {
             Write-Host "`nFile List (use -ShowDetails for more information):" -ForegroundColor Cyan
             Write-Host ("─" * 80) -ForegroundColor Gray
             
@@ -259,7 +298,7 @@ switch ($MediaType) {
         }
         
         Write-Host "`n" + ("─" * 80) -ForegroundColor Gray
-    }   }
+    }
 
     # Export results to CSV
     if ($ExportCSV) {
@@ -280,7 +319,7 @@ switch ($MediaType) {
         } catch {
             Write-Warning "Failed to export to JSON: $_"
         }
-    }   }
+    }
 
     # Display extension breakdown
     if ($results.Count -gt 0) {
@@ -307,7 +346,7 @@ switch ($MediaType) {
     return $results
 }
 
-# If script is run directly (not dot-sourced), execute the function
-if ($MyInvocation.InvocationName -ne '.') {
-    Find-MediaFiles @PSBoundParameters
+# If script is run with parameters (not dot-sourced), execute the function
+if ($PSBoundParameters.Count -gt 0) {
+    Find-MediaFiles @PSBoundParameters | Out-Null
 }
